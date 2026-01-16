@@ -15,6 +15,12 @@ def main():
         contents="Why is Boot.dev such a great place to learn backend development? Use one paragraph maximum."
     )
 
+    if not response.usage_metadata:
+        raise RuntimeError("Gemini failed to respond. Try again.")
+
+    print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+    print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+
     print("Response:")
     print(response.text)
 
