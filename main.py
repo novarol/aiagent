@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from argparse import ArgumentParser
+from prompts import system_prompt
 
 def main():
     user_prompt, is_verbose = get_cli_arguments()
@@ -51,7 +52,11 @@ def prompt_client():
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=messages
+            contents=messages,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0,
+            ),
         )
 
         if not response.usage_metadata:
