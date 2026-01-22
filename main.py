@@ -4,7 +4,7 @@ from google import genai
 from google.genai import types
 from argparse import ArgumentParser
 from prompts import system_prompt
-from call_function import available_functions
+from call_function import available_functions, call_function
 
 def main():
     user_prompt, is_verbose = get_cli_arguments()
@@ -68,11 +68,29 @@ def prompt_client():
             print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
             print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
+        function_results = []
 
         if response.function_calls:
             print("Function calls:")
             for function_call in response.function_calls:
-                print(f"Calling function: {function_call.name}({function_call.args})")
+                function_call_result = call_function(function_call, is_verbose)
+
+                if not function_call_result.parts or len(function_call_result.parts) == 0:
+                    raise Exception("Function call result does not contain parts")
+
+                function_response = function_call_result.parts[0].function_response
+
+                if not function_response:
+                    raise Exception("Function call returned a part with no function response")
+
+                if not function_response.response:
+                    raise Exception("Function response does not contain response")
+
+                function_results.append(function_call_result.parts[0])
+
+                if is_verbose:
+                    print(f"-> {function_response.response}")
+
         else:
             print("Response:")
             print(response.text)
