@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -9,7 +10,25 @@ from call_function import available_functions, call_function
 def main():
     user_prompt, is_verbose = get_cli_arguments()
 
-    prompt_client()(user_prompt, is_verbose)
+
+    if is_verbose:
+        print(f"User prompt: {user_prompt}")
+
+    generate_content = prompt_client()
+
+    parts = [types.Part(text=user_prompt)]
+
+    max_iterations = 20
+
+    for _ in range(max_iterations):
+        parts = generate_content(parts, is_verbose)
+
+        if not parts:
+            break
+
+        if _ == max_iterations - 1:
+            print("Gemini agent reached maximum iterations without a result")
+            sys.exit(1)
 
 
 def get_cli_arguments() -> tuple[str, bool]:
@@ -42,14 +61,11 @@ def prompt_client():
     client = create_client()
     messages = []
 
-    def add_content(role: str, text: str):
-        messages.append(types.Content(role=role, parts=[types.Part(text=text)]))
+    def add_content(role: str, parts: list[types.Part]):
+        messages.append(types.Content(role=role, parts=parts))
 
-    def generate_content(user_prompt: str, is_verbose: bool):
-        if is_verbose:
-            print(f"User prompt: {user_prompt}")
-
-        add_content("user", user_prompt)
+    def generate_content(parts: list[types.Part], is_verbose: bool):
+        add_content("user", parts)
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -68,7 +84,7 @@ def prompt_client():
             print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
             print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
-        function_results = []
+        function_results: list[types.Part] = []
 
         if response.function_calls:
             print("Function calls:")
@@ -90,6 +106,12 @@ def prompt_client():
 
                 if is_verbose:
                     print(f"-> {function_response.response}")
+            
+            if response.candidates:
+                for candidate in response.candidates:
+                    messages.append(candidate.content)
+
+            return function_results
 
         else:
             print("Response:")
