@@ -72,7 +72,6 @@ def prompt_client():
             contents=messages,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                temperature=0,
                 tools=[available_functions],
             ),
         )
